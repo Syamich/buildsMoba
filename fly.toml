@@ -1,4 +1,4 @@
-app = "telegram-dota-bot"
+app = "buildsMoba"
      primary_region = "ams"
 
      [[services]]

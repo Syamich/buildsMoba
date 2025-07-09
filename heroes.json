@@ -1,1 +1,23 @@
-
+{
+    "Anti-Mage": {
+        "role": "Carry",
+        "items": "Battle Fury, Manta Style, Butterfly, Abyssal Blade, Skadi, Black King Bar",
+        "talents": "Level 10: +15 Agility\nLevel 15: +25 Attack Speed\nLevel 20: +400 Blink Range\nLevel 25: +1 Mana Void Stun Duration",
+        "skill_order": "1. Mana Break\n2. Blink\n3. Mana Break\n4. Counterspell\n5. Mana Break\n6. Mana Void\n7. Mana Break\n8. Blink\n9. Blink\n10. Counterspell\n11. Mana Void\n12. Blink\n13. Counterspell\n14. Counterspell\n15. Stats\n16. Mana Void\n17-18. Stats",
+        "tips": "Фокус на фарме в начале игры, используйте Blink для мобильности и избегания ганков. В мид-гейме собирайте Battle Fury для ускорения фарма. В лейт-гейме избегайте долгих боёв без маны, используйте Mana Void для добивания врагов с низкой маной."
+    },
+    "Crystal Maiden": {
+        "role": "Support",
+        "items": "Tranquil Boots, Glimmer Cape, Force Staff, Black King Bar, Aether Lens, Lotus Orb",
+        "talents": "Level 10: +125 Cast Range\nLevel 15: +90 Crystal Nova Damage\nLevel 20: +200 Health\nLevel 25: +2s Frostbite Duration",
+        "skill_order": "1. Crystal Nova\n2. Frostbite\n3. Crystal Nova\n4. Arcane Aura\n5. Crystal Nova\n6. Freezing Field\n7. Crystal Nova\n8. Frostbite\n9. Frostbite\n10. Arcane Aura\n11. Freezing Field\n12. Frostbite\n13. Arcane Aura\n14. Arcane Aura\n15. Stats\n16. Freezing Field\n17-18. Stats",
+        "tips": "Контролируйте ману команды с помощью Arcane Aura. Используйте Frostbite для раннего контроля врагов. В тимфайтах стойте сзади, используйте Freezing Field с Glimmer Cape или Black King Bar для выживаемости."
+    },
+    "Sniper": {
+        "role": "Carry",
+        "items": "Dragon Lance, Maelstrom, Hurricane Pike, Mjollnir, Daedalus, Satanic",
+        "talents": "Level 10: +20 Attack Speed\nLevel 15: +15% Shrapnel Slow\nLevel 20: +25% Take Aim Range\nLevel 25: +4 Shrapnel Charges",
+        "skill_order": "1. Shrapnel\n2. Take Aim\n3. Shrapnel\n4. Headshot\n5. Shrapnel\n6. Assassinate\n7. Shrapnel\n8. Take Aim\n9. Take Aim\n10. Headshot\n11. Assassinate\n12. Take Aim\n13. Headshot\n14. Headshot\n15. Stats\n16. Assassinate\n17-18. Stats",
+        "tips": "Держитесь на расстоянии, используйте Shrapnel для замедления и контроля зон. Take Aim и Hurricane Pike помогают держать дистанцию. В лейт-гейме сосредоточьтесь на автоатаках с высоким уроном."
+    }
+}

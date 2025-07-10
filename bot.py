@@ -107,10 +107,13 @@ async def main():
         webhook_requests_handler.register(app, path=WEBHOOK_PATH)
         setup_application(app, dp, bot=bot)
         logging.info("Starting webhook server")
-        web.run_app(app, host=WEB_SERVER_HOST, port=WEB_SERVER_PORT)
+        return app  # Возвращаем приложение для запуска через aiohttp
     else:
         logging.info("Starting polling")
         await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    app = asyncio.run(main())
+    if app:
+        # Запускаем вебхук сервер без asyncio.run
+        web.run_app(app, host=WEB_SERVER_HOST, port=WEB_SERVER_PORT)

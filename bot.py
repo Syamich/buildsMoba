@@ -4,7 +4,7 @@ import os
 import logging
 from aiohttp import web
 from aiogram import Bot, Dispatcher, types
-from aiogram.filters import Command, Text
+from aiogram.filters import Command
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from thefuzz import process, fuzz
@@ -40,7 +40,7 @@ async def send_welcome(message: types.Message):
         reply_markup=list_keyboard
     )
 
-@dp.message(Text("Список персонажей"))
+@dp.message(lambda message: message.text == "Список персонажей")
 async def handle_list_heroes(message: types.Message):
     heroes_text = "Список персонажей LoL Wild Rift:\n" + "\n".join(
         f"{i+1}. {hero}" for i, hero in enumerate(heroes_list)
@@ -53,6 +53,8 @@ async def handle_list_heroes(message: types.Message):
 @dp.message()
 async def handle_hero_choice(message: types.Message):
     user_input = message.text.strip()
+    if user_input == "Список персонажей":
+        return  # Игнорируем, так как обработано выше
     try:
         hero_index = int(user_input) - 1
         if 0 <= hero_index < len(heroes_list):
@@ -61,14 +63,11 @@ async def handle_hero_choice(message: types.Message):
             await message.reply("Неверный номер персонажа! Введи номер или название:", reply_markup=list_keyboard)
             return
     except ValueError:
-        if user_input != "Список персонажей":
-            match = process.extractOne(user_input, heroes_list, scorer=fuzz.token_sort_ratio)
-            if match and match[1] >= 70:
-                hero_name = match[0]
-            else:
-                await message.reply("Персонаж не найден! Проверь написание или введи номер:", reply_markup=list_keyboard)
-                return
+        match = process.extractOne(user_input, heroes_list, scorer=fuzz.token_sort_ratio)
+        if match and match[1] >= 70:
+            hero_name = match[0]
         else:
+            await message.reply("Персонаж не найден! Проверь написание или введи номер:", reply_markup=list_keyboard)
             return
 
     hero = heroes_data[hero_name]

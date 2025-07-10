@@ -1,30 +1,34 @@
 import json
 import asyncio
+import os
+import logging
+from aiohttp import web
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from thefuzz import process, fuzz
 from dotenv import load_dotenv
-import os
 
-# Загрузка токена из переменной окружения
 load_dotenv()
 API_TOKEN = os.getenv("BOT_TOKEN")
+WEBHOOK_HOST = os.getenv("WEBHOOK_HOST")  # Set on Render, e.g., https://buildsMoba-bot.onrender.com
+WEBHOOK_PATH = "/webhook"
+WEBHOOK_URL = f"{WEBHOOK_HOST}{WEBHOOK_PATH}" if WEBHOOK_HOST else None
+WEB_SERVER_HOST = "0.0.0.0"
+WEB_SERVER_PORT = int(os.getenv("PORT", 8080))  # Render sets PORT
 
-# Инициализация бота
+logging.basicConfig(level=logging.INFO)
 bot = Bot(token=API_TOKEN)
 dp = Dispatcher()
 
-# Загрузка данных из JSON
 with open('heroes.json', 'r', encoding='utf-8') as f:
     heroes_data = json.load(f)
 heroes_list = list(heroes_data.keys())
 
-# Создание клавиатуры с выбором игры
 game_keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
 game_keyboard.add(KeyboardButton("Dota 2"), KeyboardButton("LoL"))
 
-# Обработчик команды /start
 @dp.message(Command("start"))
 async def send_welcome(message: types.Message):
     await message.reply(
@@ -32,11 +36,9 @@ async def send_welcome(message: types.Message):
         reply_markup=game_keyboard
     )
 
-# Обработчик выбора игры
 @dp.message(lambda message: message.text in ["Dota 2", "LoL"])
 async def handle_game_choice(message: types.Message):
     if message.text == "Dota 2":
-        # Формируем пронумерованный список персонажей
         heroes_text = "Список персонажей Dota 2:\n" + "\n".join(
             f"{i+1}. {hero}" for i, hero in enumerate(heroes_list)
         )
@@ -47,12 +49,9 @@ async def handle_game_choice(message: types.Message):
     else:
         await message.reply("Поддержка LoL будет добавлена позже. Выбери Dota 2!", reply_markup=game_keyboard)
 
-# Обработчик выбора персонажа
 @dp.message()
 async def handle_hero_choice(message: types.Message):
     user_input = message.text.strip()
-    
-    # Проверяем, является ли ввод числом
     try:
         hero_index = int(user_input) - 1
         if 0 <= hero_index < len(heroes_list):
@@ -61,15 +60,13 @@ async def handle_hero_choice(message: types.Message):
             await message.reply("Неверный номер персонажа! Введи номер или название персонажа:")
             return
     except ValueError:
-        # Если не число, ищем по названию с учётом орфографии
         match = process.extractOne(user_input, heroes_list, scorer=fuzz.token_sort_ratio)
-        if match and match[1] >= 70:  # Порог совпадения 70%
+        if match and match[1] >= 70:
             hero_name = match[0]
         else:
             await message.reply("Персонаж не найден! Проверь написание или введи номер:")
             return
 
-    # Формируем билд
     hero = heroes_data[hero_name]
     build_text = (
         f"{hero_name}:\n\n"
@@ -77,13 +74,38 @@ async def handle_hero_choice(message: types.Message):
         f"Предметы:\n{hero['items']}\n\n"
         f"Таланты:\n{hero['talents']}\n"
         f"Порядок скиллов:\n{hero['skill_order']}\n\n"
-        f"Советы:\n{hero['tips']}"
+        f"Советы: {hero['tips']}"
     )
     await message.reply(build_text)
 
-# Запуск бота
+async def on_startup(bot: Bot) -> None:
+    if WEBHOOK_URL:
+        await bot.delete_webhook()
+        await bot.set_webhook(WEBHOOK_URL)
+        logging.info(f"Webhook set to {WEBHOOK_URL}")
+    else:
+        logging.info("Starting in polling mode")
+
+async def on_shutdown(bot: Bot) -> None:
+    if WEBHOOK_URL:
+        await bot.delete_webhook()
+        logging.info("Webhook removed")
+    await bot.session.close()
+
 async def main():
-    await dp.start_polling(bot)
+    dp.startup.register(on_startup)
+    dp.shutdown.register(on_shutdown)
+    
+    if WEBHOOK_URL:
+        app = web.Application()
+        webhook_requests_handler = SimpleRequestHandler(dispatcher=dp, bot=bot)
+        webhook_requests_handler.register(app, path=WEBHOOK_PATH)
+        setup_application(app, dp, bot=bot)
+        logging.info("Starting webhook server")
+        web.run_app(app, host=WEB_SERVER_HOST, port=WEB_SERVER_PORT)
+    else:
+        logging.info("Starting polling")
+        await dp.start_polling(bot)
 
 if __name__ == "__main__":
     asyncio.run(main())

@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 API_TOKEN = os.getenv("BOT_TOKEN")
-WEBHOOK_HOST = os.getenv("WEBHOOK_HOST")  # Set on Render, e.g., https://buildsmoba-bot.onrender.com
+WEBHOOK_HOST = os.getenv("WEBHOOK_HOST")  # Set on Render, e.g., https://buildsmoba.onrender.com
 WEBHOOK_PATH = "/webhook"
 WEBHOOK_URL = f"{WEBHOOK_HOST}{WEBHOOK_PATH}" if WEBHOOK_HOST else None
 WEB_SERVER_HOST = "0.0.0.0"
@@ -83,6 +83,10 @@ async def handle_hero_choice(message: types.Message):
     )
     await message.reply(build_text)
 
+# Health check эндпоинт для Render
+async def health_check(request):
+    return web.Response(status=200, text="OK")
+
 async def on_startup(bot: Bot) -> None:
     if WEBHOOK_URL:
         await bot.delete_webhook()
@@ -92,10 +96,9 @@ async def on_startup(bot: Bot) -> None:
         logging.info("Starting in polling mode")
 
 async def on_shutdown(bot: Bot) -> None:
-    if WEBHOOK_URL:
-        await bot.delete_webhook()
-        logging.info("Webhook removed")
+    # Не удаляем вебхук, чтобы избежать сброса при перезапусках
     await bot.session.close()
+    logging.info("Bot session closed")
 
 async def main():
     dp.startup.register(on_startup)
@@ -103,17 +106,19 @@ async def main():
     
     if WEBHOOK_URL:
         app = web.Application()
+        # Добавляем health check эндпоинт
+        app.router.add_get("/", health_check)
         webhook_requests_handler = SimpleRequestHandler(dispatcher=dp, bot=bot)
         webhook_requests_handler.register(app, path=WEBHOOK_PATH)
         setup_application(app, dp, bot=bot)
         logging.info("Starting webhook server")
-        return app  # Возвращаем приложение для запуска через aiohttp
+        return app
     else:
         logging.info("Starting polling")
         await dp.start_polling(bot)
 
 if __name__ == "__main__":
-    app = asyncio.run(main())
+    loop = asyncio.get_event_loop()
+    app = loop.run_until_complete(main())
     if app:
-        # Запускаем вебхук сервер без asyncio.run
         web.run_app(app, host=WEB_SERVER_HOST, port=WEB_SERVER_PORT)

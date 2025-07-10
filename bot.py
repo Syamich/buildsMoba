@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 API_TOKEN = os.getenv("BOT_TOKEN")
-WEBHOOK_HOST = os.getenv("WEBHOOK_HOST")  # Set on Render, e.g., https://buildsMoba-bot.onrender.com
+WEBHOOK_HOST = os.getenv("WEBHOOK_HOST")  # Set on Render, e.g., https://buildsmoba-bot.onrender.com
 WEBHOOK_PATH = "/webhook"
 WEBHOOK_URL = f"{WEBHOOK_HOST}{WEBHOOK_PATH}" if WEBHOOK_HOST else None
 WEB_SERVER_HOST = "0.0.0.0"

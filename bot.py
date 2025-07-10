@@ -27,27 +27,32 @@ with open('heroes.json', 'r', encoding='utf-8') as f:
 heroes_list = list(heroes_data.keys())
 
 # Постоянная клавиатура с кнопкой "Список персонажей"
-list_keyboard = ReplyKeyboardMarkup(
+main_keyboard = ReplyKeyboardMarkup(
     keyboard=[[KeyboardButton(text="Список персонажей")]],
     resize_keyboard=True,
     one_time_keyboard=False
 )
 
+# Клавиатура с персонажами в три колонки
+def create_heroes_keyboard():
+    keyboard = []
+    for i in range(0, len(heroes_list), 3):
+        row = [KeyboardButton(text=heroes_list[j]) for j in range(i, min(i + 3, len(heroes_list)))]
+        keyboard.append(row)
+    return ReplyKeyboardMarkup(keyboard=keyboard, resize_keyboard=True, one_time_keyboard=False)
+
 @dp.message(Command("start"))
 async def send_welcome(message: types.Message):
     await message.reply(
-        "Привет! Это бот с билдами для League of Legends: Wild Rift.\nНажми 'Список персонажей' или введи имя/номер героя:",
-        reply_markup=list_keyboard
+        "Привет! Это бот с билдами для League of Legends: Wild Rift.\nНажми 'Список персонажей' или введи имя героя (на русском или английском):",
+        reply_markup=main_keyboard
     )
 
 @dp.message(lambda message: message.text == "Список персонажей")
 async def handle_list_heroes(message: types.Message):
-    heroes_text = "Список персонажей LoL Wild Rift:\n" + "\n".join(
-        f"{i+1}. {hero}" for i, hero in enumerate(heroes_list)
-    )
     await message.reply(
-        f"{heroes_text}\n\nВведи номер или название персонажа:",
-        reply_markup=list_keyboard
+        "Выбери персонажа:",
+        reply_markup=create_heroes_keyboard()
     )
 
 @dp.message()
@@ -55,20 +60,33 @@ async def handle_hero_choice(message: types.Message):
     user_input = message.text.strip()
     if user_input == "Список персонажей":
         return  # Игнорируем, так как обработано выше
-    try:
-        hero_index = int(user_input) - 1
-        if 0 <= hero_index < len(heroes_list):
-            hero_name = heroes_list[hero_index]
-        else:
-            await message.reply("Неверный номер персонажа! Введи номер или название:", reply_markup=list_keyboard)
-            return
-    except ValueError:
-        match = process.extractOne(user_input, heroes_list, scorer=fuzz.token_sort_ratio)
-        if match and match[1] >= 70:
-            hero_name = match[0]
-        else:
-            await message.reply("Персонаж не найден! Проверь написание или введи номер:", reply_markup=list_keyboard)
-            return
+    
+    # Словарь для соответствия английских имён русским
+    eng_to_rus = {
+        "Ahri": "Ари", "Nocturne": "Ноктюрн", "Zilean": "Зайл", "Vi": "Вай", "Sett": "Сетт",
+        "Ryze": "Райз", "Leona": "Леона", "Gnar": "Гнар", "Viego": "Виего", "Rumble": "Рамбл",
+        "Aatrox": "Атрокс", "Akali": "Акали", "Ashe": "Эш", "Blitzcrank": "Блицкранк",
+        "Caitlyn": "Кейтлин", "Draven": "Дрейвен", "Evelynn": "Эвелин", "Garen": "Гарен",
+        "Janna": "Джанна", "Jax": "Джакс"
+    }
+    # Поиск по русскому или английскому имени
+    hero_name = None
+    if user_input in heroes_list:
+        hero_name = user_input
+    else:
+        # Проверяем английское имя
+        for eng, rus in eng_to_rus.items():
+            if user_input.lower() == eng.lower():
+                hero_name = rus
+                break
+        if not hero_name:
+            # Проверяем по fuzzy-поиску
+            match = process.extractOne(user_input, heroes_list, scorer=fuzz.token_sort_ratio)
+            if match and match[1] >= 70:
+                hero_name = match[0]
+            else:
+                await message.reply("Персонаж не найден! Проверь написание или выбери из списка:", reply_markup=main_keyboard)
+                return
 
     hero = heroes_data[hero_name]
     build_text = (
@@ -79,7 +97,7 @@ async def handle_hero_choice(message: types.Message):
         f"Порядок скиллов:\n{hero['s']}\n\n"
         f"Советы:\n{hero['t']}"
     )
-    await message.reply(build_text, reply_markup=list_keyboard)
+    await message.reply(build_text, reply_markup=main_keyboard)
 
 async def health_check(request):
     return web.Response(status=200, text="OK")

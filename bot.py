@@ -4,8 +4,8 @@ import os
 import logging
 from aiohttp import web
 from aiogram import Bot, Dispatcher, types
-from aiogram.filters import Command
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.filters import Command, Text
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
 from aiogram.webhook.aiohttp_server import SimpleRequestHandler, setup_application
 from thefuzz import process, fuzz
 from dotenv import load_dotenv
@@ -26,28 +26,29 @@ with open('heroes.json', 'r', encoding='utf-8') as f:
     heroes_data = json.load(f)
 heroes_list = list(heroes_data.keys())
 
-# Инлайн-кнопка "Список персонажей"
-list_button = InlineKeyboardMarkup(inline_keyboard=[
-    [InlineKeyboardButton(text="Список персонажей", callback_data="list_heroes")]
-])
+# Постоянная клавиатура с кнопкой "Список персонажей"
+list_keyboard = ReplyKeyboardMarkup(
+    keyboard=[[KeyboardButton(text="Список персонажей")]],
+    resize_keyboard=True,
+    one_time_keyboard=False
+)
 
 @dp.message(Command("start"))
 async def send_welcome(message: types.Message):
     await message.reply(
-        "Привет! Это бот с билдами для League of Legends: Wild Rift.\nНажми кнопку ниже, чтобы увидеть список персонажей:",
-        reply_markup=list_button
+        "Привет! Это бот с билдами для League of Legends: Wild Rift.\nНажми 'Список персонажей' или введи имя/номер героя:",
+        reply_markup=list_keyboard
     )
 
-@dp.callback_query(lambda c: c.data == "list_heroes")
-async def handle_list_heroes(callback: types.CallbackQuery):
+@dp.message(Text("Список персонажей"))
+async def handle_list_heroes(message: types.Message):
     heroes_text = "Список персонажей LoL Wild Rift:\n" + "\n".join(
         f"{i+1}. {hero}" for i, hero in enumerate(heroes_list)
     )
-    await callback.message.reply(
+    await message.reply(
         f"{heroes_text}\n\nВведи номер или название персонажа:",
-        reply_markup=list_button
+        reply_markup=list_keyboard
     )
-    await callback.answer()
 
 @dp.message()
 async def handle_hero_choice(message: types.Message):
@@ -57,14 +58,17 @@ async def handle_hero_choice(message: types.Message):
         if 0 <= hero_index < len(heroes_list):
             hero_name = heroes_list[hero_index]
         else:
-            await message.reply("Неверный номер персонажа! Введи номер или название:", reply_markup=list_button)
+            await message.reply("Неверный номер персонажа! Введи номер или название:", reply_markup=list_keyboard)
             return
     except ValueError:
-        match = process.extractOne(user_input, heroes_list, scorer=fuzz.token_sort_ratio)
-        if match and match[1] >= 70:
-            hero_name = match[0]
+        if user_input != "Список персонажей":
+            match = process.extractOne(user_input, heroes_list, scorer=fuzz.token_sort_ratio)
+            if match and match[1] >= 70:
+                hero_name = match[0]
+            else:
+                await message.reply("Персонаж не найден! Проверь написание или введи номер:", reply_markup=list_keyboard)
+                return
         else:
-            await message.reply("Персонаж не найден! Проверь написание или введи номер:", reply_markup=list_button)
             return
 
     hero = heroes_data[hero_name]
@@ -76,7 +80,7 @@ async def handle_hero_choice(message: types.Message):
         f"Порядок скиллов:\n{hero['s']}\n\n"
         f"Советы:\n{hero['t']}"
     )
-    await message.reply(build_text, reply_markup=list_button)
+    await message.reply(build_text, reply_markup=list_keyboard)
 
 async def health_check(request):
     return web.Response(status=200, text="OK")

@@ -26,8 +26,13 @@ with open('heroes.json', 'r', encoding='utf-8') as f:
     heroes_data = json.load(f)
 heroes_list = list(heroes_data.keys())
 
-game_keyboard = ReplyKeyboardMarkup(resize_keyboard=True)
-game_keyboard.add(KeyboardButton("Dota 2"), KeyboardButton("LoL"))
+# Создаём клавиатуру как список списков
+game_keyboard = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="Dota 2"), KeyboardButton(text="LoL")]
+    ],
+    resize_keyboard=True
+)
 
 @dp.message(Command("start"))
 async def send_welcome(message: types.Message):
